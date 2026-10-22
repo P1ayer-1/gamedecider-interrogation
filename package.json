@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "DM5.3 GameDecider browser game; ES modules (no dependencies installed, everything is vendored)"
+}

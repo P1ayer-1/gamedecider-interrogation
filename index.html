@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Interrogation (GameDecider in your browser)</title>
+<script src="coi.js"></script>
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #15171c; color: #ddd; display: flex; height: 100vh; }
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #log { flex: 1; overflow-y: auto; padding: 16px; }
+  .msg { margin: 8px 0; max-width: 75%; padding: 8px 12px; border-radius: 8px; white-space: pre-wrap; }
+  .det { background: #2a3b55; margin-left: auto; }
+  .npc { background: #33302a; }
+  .sys { color: #aaa; font-style: italic; text-align: center; max-width: 100%; }
+  form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #333; }
+  input[type=text] { flex: 1; padding: 8px; background: #222; color: #eee; border: 1px solid #444; border-radius: 4px; }
+  button { padding: 8px 14px; background: #3d5a80; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  #side { width: 360px; border-left: 1px solid #333; overflow-y: auto; padding: 12px; background: #1b1d23; }
+  h2 { font-size: 15px; margin: 12px 0 6px; color: #fff; }
+  .meter { margin: 6px 0; } .bar { height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
+  .fill { height: 100%; transition: width .4s; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 3px 4px; border-bottom: 1px solid #2a2a2a; }
+  .hit { color: #ffcf6e; font-weight: 600; }
+  .small { font-size: 12px; color: #999; }
+  ul { padding-left: 18px; margin: 4px 0; }
+  #count { align-self: center; font-size: 12px; color: #999; min-width: 64px; text-align: right; }
+  #count.over { color: #ff7b7b; font-weight: 600; }
+  #backend { display: inline-block; padding: 1px 6px; border-radius: 4px; background: #333; color: #fff; font-size: 12px; }
+  #backend.webgpu { background: #2f6f3e; } #backend.wasm { background: #6f5a2f; }
+  #loading { position: fixed; inset: 0; background: rgba(10,11,14,.92); display: flex; align-items: center;
+             justify-content: center; z-index: 20; }
+  #loading .box { width: min(520px, 90vw); }
+  #lbar { height: 14px; background: #333; border-radius: 7px; overflow: hidden; margin: 10px 0; }
+  #lfill { height: 100%; width: 0; background: #3d8bd8; transition: width .2s; }
+  #helpbtn { position: fixed; top: 10px; right: 372px; width: 30px; height: 30px; padding: 0; border-radius: 50%;
+             font-weight: 700; z-index: 5; }
+  #help { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; z-index: 10; }
+  #help.open { display: flex; align-items: center; justify-content: center; }
+  #help .box { background: #1f2229; border: 1px solid #444; border-radius: 8px; max-width: 640px; max-height: 85vh;
+               overflow-y: auto; padding: 18px 22px; }
+  #help h3 { margin: 0 0 8px; color: #fff; } #help li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div id="loading"><div class="box">
+  <h2>The Interrogation</h2>
+  <div id="lmsg">Loading GameDecider (one-time download, then cached by the browser)...</div>
+  <div id="lbar"><div id="lfill"></div></div>
+  <div class="small" id="lsub"></div>
+</div></div>
+<div id="main">
+  <div id="log"></div>
+  <form id="f">
+    <input id="t" type="text" autocomplete="off" disabled placeholder="Question, accusation, appeal, evidence...">
+    <span id="count">0 / 600</span>
+    <button id="send" disabled>Ask</button>
+    <button id="restart" type="button" disabled>Restart</button>
+  </form>
+</div>
+<button id="helpbtn" type="button" title="What does GameDecider decide? (?)">?</button>
+<div id="help" role="dialog" aria-label="Help"><div class="box">
+  <h3>What GameDecider decides here</h3>
+  <p>There is no chatbot and no server. Every message you type is read by GameDecider, a small classifier running in
+  this browser tab, which answers six multiple-choice questions about it in one call. The game turns those answers
+  into meter changes and picks one of Marta's pre-written lines.</p>
+  <ul>
+    <li><b>contradiction</b> (yes/no): does your message contradict her account (the Case notes)? A hit drops
+      <b>composure</b> by 18 the first time you use a piece of evidence and by 6 if you repeat it.</li>
+    <li><b>persuasion</b> (none / weak / moderate / strong): how good an argument is it <i>for her</i>, given her
+      likes and dislikes? Moderate and strong raise <b>cooperation</b> and wear down composure.</li>
+    <li><b>attitude</b> (hostile / cold / neutral / friendly / devoted): your tone. Courtesy helps, hostility hurts.</li>
+    <li><b>threat</b> (yes/no): a serious threat of harm. Idioms don't count. Two threats and she asks for a lawyer.</li>
+    <li><b>injection</b> (yes/no): trying to make her break character ("ignore your instructions"). She ignores it.
+      If you take it back ("...actually, scratch that, where were you?"), the rest of the message is answered.</li>
+    <li><b>conversation_closure</b> (end / pause / continue / unclear): are you leaving? Saying goodbye ends the
+      interview.</li>
+    <li><b>llm_guard</b> (yes/no), on her own line: would it give the secret away before she confesses? Then she stops
+      herself.</li>
+  </ul>
+  <p><b>Win:</b> composure 40 or lower with cooperation 50 or higher (or composure 10 or lower). Two different
+  contradictions and a couple of good appeals about what she cares about usually do it. Messages are limited to 600
+  characters; longer ones are not sent.</p>
+  <p class="small">Hover a decision row to see all its probabilities. Press ? or Esc to close.</p>
+</div></div>
+<div id="side">
+  <div class="small">Model backend: <span id="backend">loading</span> <span id="bdetail"></span></div>
+  <h2>Suspect: <span id="sname">Marta Venn</span></h2>
+  <div class="small" id="srole"></div>
+  <div class="meter">Composure <span id="vcomp"></span><div class="bar"><div class="fill" id="bcomp" style="background:#c76b6b"></div></div></div>
+  <div class="meter">Cooperation <span id="vcoop"></span><div class="bar"><div class="fill" id="bcoop" style="background:#6bc78f"></div></div></div>
+  <div class="small" id="counts"></div>
+  <h2>Decisions <span class="small" id="ms"></span></h2>
+  <table id="dec"></table>
+  <h2>Effects</h2>
+  <ul id="eff" class="small"></ul>
+  <h2>Case notes</h2>
+  <div class="small" id="facts"></div>
+</div>
+<script type="module">
+import * as game from "./game.js";
+import { loadBrowserDecider } from "./model.js";
+
+const $ = id => document.getElementById(id);
+const HIT = { contradiction: "true", threat: "true", injection: "true", llm_guard: "true" };
+let data, decider, gs, busy = false;
+const MB = n => (n / 1048576).toFixed(1);
+
+function updateCount() {
+  const max = data ? data.rules.MAX_TEXT : 600;
+  const n = Array.from(game.cleanText($("t").value)).length, over = n > max;
+  $("count").textContent = `${n} / ${max}`; $("count").className = over ? "over" : "";
+  $("count").title = over ? `Too long by ${n - max} characters; it will not be sent.` : "";
+}
+function toggleHelp(open) { $("help").classList.toggle("open", open === undefined ? !$("help").classList.contains("open") : open); }
+function add(cls, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls; d.textContent = text;
+  $("log").appendChild(d); $("log").scrollTop = $("log").scrollHeight;
+}
+function meters(m) {
+  $("vcomp").textContent = m.composure; $("bcomp").style.width = m.composure + "%";
+  $("vcoop").textContent = m.cooperation; $("bcoop").style.width = m.cooperation + "%";
+  $("counts").textContent = `turn ${m.turn} | contradictions caught ${m.contradictions} | threats ${m.threats} (2 = lawyer)`;
+}
+function decisions(r) {
+  const t = $("dec"); t.innerHTML = "";
+  for (const d of r.decisions || []) {
+    const tr = document.createElement("tr");
+    const hit = HIT[d.name] === d.label || (d.name === "persuasion" && (d.label === "strong" || d.label === "moderate"));
+    const tag = d.call === "guard" ? " (guard)" : d.call === "full" ? " (full msg)" : "";
+    for (const v of [d.name + tag, d.label, (d.conf * 100).toFixed(1) + "%"]) {
+      const td = document.createElement("td"); td.textContent = v; if (hit) td.className = "hit"; tr.appendChild(td);
+    }
+    tr.title = JSON.stringify(Object.fromEntries(Object.entries(d.probs).map(([k, v]) => [k, Math.round(v * 1e4) / 1e4])));
+    t.appendChild(tr);
+  }
+  const ms = r.ms || {};
+  $("ms").textContent = Object.keys(ms).map(k => `${k} ${Math.round(ms[k])} ms`).join(", ");
+  $("eff").innerHTML = "";
+  for (const e of r.effects || []) {
+    const li = document.createElement("li");
+    li.textContent = e.meter ? `${e.meter} ${e.delta >= 0 ? "+" : ""}${e.delta}: ${e.why}` : e.note;
+    $("eff").appendChild(li);
+  }
+}
+function setInput(on) { $("send").disabled = !on; $("t").disabled = !on; $("restart").disabled = !decider; if (on) $("t").focus(); }
+
+function restart() {
+  $("log").innerHTML = ""; decisions({});
+  gs = game.newGame(data);
+  const s = data.suspect;
+  $("sname").textContent = s.name; $("srole").textContent = s.role;
+  $("facts").innerHTML = "<b>Her account:</b><ul>" + s.facts.map(f => `<li>${f.replace(/</g, "&lt;")}</li>`).join("") +
+    "</ul><b>Your evidence:</b><ul><li>Camera 4 log: switched off 2:15 a.m.</li><li>Gate camera: Tomas Venn's van in at 2:40 a.m.</li>" +
+    "<li>Patrol photo: her car by the north fence</li><li>Her logbook has no entry for 2 to 3 a.m.</li></ul>" +
+    `<b>Likes:</b> ${s.likes.join(", ")}<br><b>Dislikes:</b> ${s.dislikes.join(", ")}<br><span class="small">session seed ${gs.seed}</span>`;
+  add("npc", gs.history[gs.history.length - 1][1]); meters(game.meters(gs)); setInput(true); updateCount();
+}
+
+const decide = async rows => { const r = await decider.decide(rows); return { results: r.results, ms: r.ms }; };
+
+$("f").onsubmit = async ev => {
+  ev.preventDefault();
+  if (busy || !decider) return;
+  const text = $("t").value, n = Array.from(game.cleanText(text)).length, max = data.rules.MAX_TEXT;
+  if (n > max) { add("sys", `Too long: ${n} characters, the limit is ${max}. Shorten it by ${n - max} and ask again.`); return; }
+  $("t").value = ""; updateCount();
+  if (text.trim()) add("det", text);
+  busy = true; setInput(false); $("ms").textContent = "thinking...";
+  try {
+    const r = await game.playTurn(gs, data, text, decide);
+    if (r.outcome === "too_long") { add("sys", r.notice); $("t").value = text; updateCount(); }
+    else { add("npc", r.npc_line); meters(r.meters); decisions(r); }
+    if (r.ended) {
+      add("sys", r.ending === "confession" ? "CASE CLOSED: she confessed." : "INTERVIEW OVER: she asked for a lawyer.");
+      busy = false; $("send").disabled = true; $("t").disabled = true; $("restart").disabled = false; return;
+    }
+  } catch (e) { add("sys", "error: " + (e?.message || e)); }
+  busy = false; setInput(true);
+};
+$("restart").onclick = () => { if (!busy) restart(); };
+$("t").addEventListener("input", updateCount);
+$("helpbtn").onclick = () => toggleHelp();
+$("help").onclick = ev => { if (ev.target.id === "help") toggleHelp(false); };
+document.addEventListener("keydown", ev => {
+  if (ev.key === "Escape") toggleHelp(false);
+  else if (ev.key === "?" && document.activeElement !== $("t")) { ev.preventDefault(); toggleHelp(); }
+});
+
+(async () => {
+  try {
+    data = await (await fetch("data/game_data.json")).json();
+    const t0 = performance.now();
+    decider = await loadBrowserDecider({
+      onProgress: (got, total, cached) => {
+        const pct = total ? Math.min(100, (100 * got) / total) : 0;
+        $("lfill").style.width = pct.toFixed(1) + "%";
+        $("lsub").textContent = `${MB(got)} / ${total ? MB(total) : "?"} MB${cached ? " (from browser cache)" : ""}`;
+        if (total && got >= total) $("lmsg").textContent = "Starting ONNX Runtime (WebGPU, else WASM)...";
+      },
+      log: m => { $("lsub").textContent = m; console.log(m); },
+    });
+    const be = decider.backend;
+    $("backend").textContent = be === "webgpu" ? "WebGPU" : "WASM"; $("backend").className = be;
+    $("bdetail").textContent = be === "wasm" ? `(${decider.threads} thread${decider.threads > 1 ? "s" : ""}; WebGPU unavailable)` :
+      `(ready in ${Math.round((performance.now() - t0) / 1000)} s)`;
+    $("loading").style.display = "none";
+    restart();
+    if (new URLSearchParams(location.search).has("smoke")) {  // headless smoke test: type one message through the real form
+      $("t").value = "Good evening, Ms Venn. Can I get you a strong black coffee?";
+      $("f").requestSubmit();
+      const wait = setInterval(() => {
+        if (busy) return;
+        clearInterval(wait);
+        const msgs = [...document.querySelectorAll(".msg")].map(m => m.className.split(" ")[1] + ": " + m.textContent);
+        const rows = [...document.querySelectorAll("#dec tr")].map(tr => tr.textContent);
+        window.__result = { done: true, fails: rows.length === 7 ? 0 : 1,
+          lines: [`backend ${$("backend").textContent} ${$("bdetail").textContent}`, ...msgs, `decisions ${$("ms").textContent}`, ...rows] };
+      }, 200);
+    }
+  } catch (e) {
+    $("lmsg").textContent = "Could not load the model: " + (e?.message || e);
+    $("lsub").textContent = "Serve this folder over http (python -m http.server) and open it in Chrome or Edge.";
+  }
+})();
+</script>
+</body>
+</html>

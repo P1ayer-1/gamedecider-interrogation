@@ -1,0 +1,184 @@
+{
+ "base_model": {
+  "id": "answerdotai/ModernBERT-base",
+  "license": "apache-2.0",
+  "revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8"
+ },
+ "calibration": {
+  "counts": {
+   "choice|11+": 12,
+   "choice|3-5": 241,
+   "choice|6-10": 306,
+   "noul|2": 515,
+   "score|3-5": 285
+  },
+  "default": 1.0,
+  "min_samples": 10,
+  "t_range": [
+   0.05,
+   20.0
+  ],
+  "temperatures": {
+   "choice|11+": 4.625604430628291,
+   "choice|3-5": 2.2217195103454923,
+   "choice|6-10": 2.741198109205342,
+   "noul|2": 2.752266902741933,
+   "score|3-5": 2.4051923894075413
+  },
+  "version": 1
+ },
+ "input_dtype": "int64",
+ "inputs": [
+  "input_ids",
+  "segment_ids",
+  "position_ids",
+  "marker_pos",
+  "marker_qtype",
+  "marker_mask"
+ ],
+ "layout": "C",
+ "mask_mode": "segment",
+ "max_len": 3072,
+ "onnx": {
+  "bytes": 299847354,
+  "exporter": "torch.onnx.export legacy (dynamo=False)",
+  "file": "gamedecider.onnx",
+  "fp32_bytes": 599050991,
+  "fp32_sha256": "70035813e154174e6ac76e7431b8817bf0097f0ef6159569ec9a6d8f3454e705",
+  "fp32_source": "E:\\DecisionModel\\runs\\dm4\\eval\\onnx\\dm43_modernbert_75kpub_open2.onnx",
+  "opset": 17,
+  "parts": [
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part00",
+    "sha256": "975a52276bf339cf02f6ee46e8b08fee747f4f62163ce4075e29d44c5dd75bf0"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part01",
+    "sha256": "d54b3d12418d9e4fc1bd38da64f5fc8f21b055b53a57d43d554017a248a17983"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part02",
+    "sha256": "8b7a1dc3a389479094dee8c6e1a68fb54fdbfbe134faf934ba5912ae598fb822"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part03",
+    "sha256": "e733183cfad7558b5796434b7d7ab9c1e7391203ffab6bc5669b035805197820"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part04",
+    "sha256": "b41369eb2a7736d0ca1fb0ec439fb05e508b9bb9fe8ed79e131a5cffec80f208"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part05",
+    "sha256": "17308dd0cf66c263d3cf1bbcd5c34758dca54717ecf8ddf9f9f60b78d0fa8b72"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part06",
+    "sha256": "af6a9205a1e57402516643043523134b5d741046eaf2934467717bc415fb8f10"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part07",
+    "sha256": "31da1fcd30786ca18e7a9f53edbb2bacaf39677a2ef1d77ddbf474b02d953398"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part08",
+    "sha256": "c5cf9963b4bafa9fc8d20eacfe7078de40698cbdc009a5d05c1cd2a84742f413"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part09",
+    "sha256": "abf6d3f0d30c4a152b5fd8a65694b18fd4a79e20abbdb1ee265c620f8ae00a96"
+   },
+   {
+    "bytes": 25165824,
+    "file": "gamedecider.onnx.part10",
+    "sha256": "7749a513ebc627da974a9195e7764618dc88ba2f6a051d5d9f0767ce99daf88d"
+   },
+   {
+    "bytes": 23023290,
+    "file": "gamedecider.onnx.part11",
+    "sha256": "b66436c48a483875056ee5484bc7fd0486a597b3271f9df06abe6f0e508674c7"
+   }
+  ],
+  "sha256": "d56444fd70191fda730dc9e845685138b29a7f4daf8fec6161df4f4712729fa6",
+  "variant": "w16",
+  "variants": {
+   "fp16": {
+    "bytes": 299987074,
+    "converter": "onnxruntime.transformers.float16.convert_float_to_float16(keep_io_types=True)",
+    "path": "E:\\DecisionModel\\runs\\dm4\\eval\\onnx\\dm43_modernbert_75kpub_open2.fp16.onnx",
+    "sha256": "e65b4e07e65a557d3f96df0952ab1cd4f2fe93009b5906374c2ccb3a6831e37c"
+   },
+   "w16": {
+    "bytes": 299847354,
+    "converter": "tools/export.py weights_fp16: fp32 initializers >= 16 elements -> fp16 + Cast(to=FLOAT)",
+    "path": "E:\\DecisionModel\\runs\\dm4\\eval\\onnx\\dm43_modernbert_75kpub_open2.w16.onnx",
+    "sha256": "d56444fd70191fda730dc9e845685138b29a7f4daf8fec6161df4f4712729fa6"
+   }
+  }
+ },
+ "output": "logits [B,K] float32 (pad markers -1e4)",
+ "parity": {
+  "L_max": 616,
+  "L_min": 138,
+  "fp16_padded_batch_vs_batch1": {
+   "max_abs_logit_diff": 0.02716618776321411,
+   "n_sequences": 8
+  },
+  "n_questions": 20,
+  "n_sequences": 20,
+  "ort_cpu_fp16": {
+   "label_agreement": "20/20",
+   "max_abs_logit_diff": 0.08973312377929688
+  },
+  "ort_cpu_fp32": {
+   "label_agreement": "20/20",
+   "max_abs_logit_diff": 2.86102294921875e-05
+  },
+  "ort_cpu_w16": {
+   "label_agreement": "20/20",
+   "max_abs_logit_diff": 0.01845085620880127
+  },
+  "reference": "PyTorch fp32 CPU (eval_ckpt.load_checkpoint)",
+  "rows": 20,
+  "sample": "random.Random(0).sample(test.jsonl, 20)",
+  "seed": 0
+ },
+ "qtype": {
+  "choice": 1,
+  "noul": 0,
+  "score": 2
+ },
+ "run_dir": "E:\\DecisionModel\\runs\\dm4\\dm43_modernbert_75kpub_open2",
+ "run_id": "dm43_modernbert_75kpub_open2",
+ "specials": {
+  "cls": 50281,
+  "mask": 50284,
+  "pad": 50283,
+  "sep": 50282
+ },
+ "state_reserve": 64,
+ "tokenizer": {
+  "id": "answerdotai/ModernBERT-base",
+  "license": "apache-2.0",
+  "revision": "8949b909ec900327062f0ebf497f51aef5e6f0c8"
+ },
+ "tokenizer_json_sha256": "9fd55248d51d33976b324fc11592e28071da7d41e0e9401dfb7082e30574b7b1",
+ "versions": {
+  "numpy": "2.4.6",
+  "onnx": "1.23.2",
+  "onnxruntime": "1.24.4",
+  "python": "3.11.17",
+  "torch": "2.11.0+cu128",
+  "transformers": "5.19.0"
+ }
+}
